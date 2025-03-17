@@ -26,8 +26,11 @@ namespace BouncingBubble
 
     public class BubbleWindow : Window
     {
+        private Ellipse bubble2;
+        private double xSpeed2 = -4, ySpeed2 = -4;
+        private double xPos2 = 700, yPos2 = 700;
         private Ellipse bubble;
-        private double xSpeed = 1.8, ySpeed = 1.8;
+        private double xSpeed = 3.8, ySpeed = 3.8;
         private double xPos = 100, yPos = 100;
         private Random random = new Random();
         private double screenWidth, screenHeight;
@@ -154,6 +157,8 @@ namespace BouncingBubble
 
         private void CreateBubble()
         {
+            Canvas canvas = new Canvas();
+
             RadialGradientBrush gradientBrush = new RadialGradientBrush();
             gradientBrush.GradientOrigin = new Point(.3, .3);
             gradientBrush.Center = new Point(.5, .5);
@@ -163,7 +168,15 @@ namespace BouncingBubble
             gradientBrush.GradientStops.Add(new GradientStop(Colors.Blue, 0.8));      // Outer color
             gradientBrush.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0)); // Fading edge
 
-            Canvas canvas = new Canvas();
+            RadialGradientBrush gradientBrush2 = new RadialGradientBrush();
+            gradientBrush2.GradientOrigin = new Point(.3, .3);
+            gradientBrush2.Center = new Point(.5, .5);
+            gradientBrush2.RadiusX = .5;
+            gradientBrush2.RadiusY = .5;
+            gradientBrush2.GradientStops.Add(new GradientStop(Colors.LightGreen, 0.0));  // Center color
+            gradientBrush2.GradientStops.Add(new GradientStop(Colors.Green, 0.8));      // Outer color
+            gradientBrush2.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0)); // Fading edge
+
             bubble = new Ellipse
             {
                 Width = 80,
@@ -177,24 +190,17 @@ namespace BouncingBubble
                 //    Opacity = 0.8
                 //}
             };
+            bubble2 = new Ellipse
+            {
+                Width = 50,
+                Height = 50,
+                Fill = gradientBrush2,
+                Opacity = 0.75,
+            };
             canvas.Children.Add(bubble);
+            canvas.Children.Add(bubble2);
             this.Content = canvas;
-            //AnimateBubbleColor();
         }
-
-        //private void AnimateBubbleColor()
-        //{
-        //    ColorAnimation colorAnimation = new ColorAnimation
-        //    {
-        //        From = Colors.LightBlue,
-        //        To = Colors.Pink,
-        //        Duration = TimeSpan.FromSeconds(2),
-        //        AutoReverse = true,
-        //        RepeatBehavior = RepeatBehavior.Forever
-        //    };
-
-        //    bubble.Fill.BeginAnimation(SolidColorBrush.ColorProperty, colorAnimation);
-        //}
 
         private void InitializeSpeed()
         {
@@ -210,13 +216,21 @@ namespace BouncingBubble
             screenWidth = SystemParameters.PrimaryScreenWidth;
             screenHeight = SystemParameters.PrimaryScreenHeight;
 
-            // Predict next position before moving
-            double nextX = xPos + xSpeed;
-            double nextY = yPos + ySpeed;
+            MoveBubble(ref xPos, ref yPos, ref xSpeed, ref ySpeed, bubble);
+            MoveBubble(ref xPos2, ref yPos2, ref xSpeed2, ref ySpeed2, bubble2);
 
-            bool bounced = false; // Track if bounce happens
+            CheckBubbleCollision();
+        }
 
-            // Screen boundary collision
+        // Moves a single bubble and checks for screen boundaries
+        private void MoveBubble(ref double x, ref double y, ref double xSpeed, ref double ySpeed, Ellipse bubble)
+        {
+            double nextX = x + xSpeed;
+            double nextY = y + ySpeed;
+
+            bool bounced = false;
+
+            // Screen collision detection
             if (nextX <= 0 || nextX + bubble.Width >= screenWidth)
             {
                 xSpeed *= -1;
@@ -237,28 +251,65 @@ namespace BouncingBubble
                 if (nextX + bubble.Width > window.Left && nextX < window.Right &&
             nextY + bubble.Height > window.Top && nextY < window.Bottom)
                 {
-                    if (xPos + bubble.Width <= window.Left || xPos >= window.Right)
+                    if (x + bubble.Width <= window.Left || x >= window.Right)
                         xSpeed *= -1; // Reverse X direction
 
-                    if (yPos + bubble.Height <= window.Top || yPos >= window.Bottom)
+                    if (y + bubble.Height <= window.Top || y >= window.Bottom)
                         ySpeed *= -1; // Reverse Y direction
 
                     break; // Exit loop to avoid double bouncing
                 }
             }
 
+            Rect taskbarBounds = GetTaskbarBounds();
+            if (taskbarBounds != Rect.Empty && taskbarBounds.IntersectsWith(new Rect(nextX, nextY, bubble.Width, bubble.Height)))
+            {
+                if (taskbarBounds.Height < taskbarBounds.Width) // Horizontal taskbar (top or bottom)
+                    ySpeed *= -1;
+                else // Vertical taskbar (left or right)
+                    xSpeed *= -1;
+
+                bounced = true;
+            }
+
             if (bounced)
-                ChangeBubbleColor();
+            {
+                bubble.Fill = ChangeBubbleColor();
+            }
 
-            xPos += xSpeed;
-            yPos += ySpeed;
+            // Apply new position
+            x += xSpeed;
+            y += ySpeed;
 
-            Canvas.SetLeft(bubble, xPos);
-            Canvas.SetTop(bubble, yPos);
+            Canvas.SetLeft(bubble, x);
+            Canvas.SetTop(bubble, y);
         }
 
+        private void CheckBubbleCollision()
+        {
+            double dx = xPos2 - xPos;
+            double dy = yPos2 - yPos;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+
+            if (distance < bubble.Width) // Collision detected
+            {
+                // Swap speeds for a simple elastic collision effect
+                double tempXSpeed = xSpeed;
+                double tempYSpeed = ySpeed;
+                xSpeed = xSpeed2;
+                ySpeed = ySpeed2;
+                xSpeed2 = tempXSpeed;
+                ySpeed2 = tempYSpeed;
+
+                // Change colors on collision
+                bubble.Fill = ChangeBubbleColor();
+                bubble2.Fill = ChangeBubbleColor();
+            }
+        }
+
+
         // Random color function
-        private void ChangeBubbleColor()
+        private RadialGradientBrush ChangeBubbleColor()
         {
             Color randomColor = Color.FromRgb((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
             Color randomColor2 = Color.FromRgb((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
@@ -272,7 +323,35 @@ namespace BouncingBubble
             gradientBrush.GradientStops.Add(new GradientStop(randomColor2, 0.8));      // Outer color
             gradientBrush.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0)); // Fading edge
 
-            bubble.Fill = gradientBrush;
+            return gradientBrush;
+        }
+
+        private Rect GetTaskbarBounds()
+        {
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
+            double workWidth = SystemParameters.WorkArea.Width;
+            double workHeight = SystemParameters.WorkArea.Height;
+            double workLeft = SystemParameters.WorkArea.Left;
+            double workTop = SystemParameters.WorkArea.Top;
+
+            // Calculate taskbar position based on available work area
+            if (workWidth < screenWidth) // Taskbar on left or right
+            {
+                if (workLeft > 0)
+                    return new Rect(0, 0, workLeft, screenHeight);  // Taskbar on the left
+                else
+                    return new Rect(workWidth, 0, screenWidth - workWidth, screenHeight); // Taskbar on the right
+            }
+            else if (workHeight < screenHeight) // Taskbar on top or bottom
+            {
+                if (workTop > 0)
+                    return new Rect(0, 0, screenWidth, workTop);  // Taskbar on the top
+                else
+                    return new Rect(0, workHeight, screenWidth, screenHeight - workHeight); // Taskbar on the bottom
+            }
+
+            return Rect.Empty; // No taskbar found (rare case)
         }
     }
 }
