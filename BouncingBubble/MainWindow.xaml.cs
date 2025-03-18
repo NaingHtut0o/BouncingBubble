@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Windows.Controls;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BouncingBubble
 {
@@ -35,6 +36,7 @@ namespace BouncingBubble
         DispatcherTimer timer;
         private MouseHook mouseHook;
         private OpenedWindows openedWindows;
+        private ParticleEffect particleEffect;
 
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
@@ -88,6 +90,8 @@ namespace BouncingBubble
             mouseHook.OnMouseClick += MouseClicked;
 
             openedWindows = new OpenedWindows();
+
+            particleEffect = new ParticleEffect();
         }
 
         private void MouseClicked(int mouseX, int mouseY)
@@ -259,6 +263,7 @@ namespace BouncingBubble
 
             if (bounced)
             {
+                particleEffect.CreateSpark(new Point(x, y));
                 bubble.Fill = ChangeBubbleColor();
             }
 
@@ -289,14 +294,46 @@ namespace BouncingBubble
                 ySpeed2 = tempYSpeed;
                 isMoving2 = tempIsMoving;
 
-                xPos += xSpeed *2;
-                yPos += ySpeed *2;
-                xPos2 += xSpeed2 *2;
-                yPos2 += ySpeed2 *2;
-
                 // Change colors on collision
                 bubble.Fill = ChangeBubbleColor();
                 bubble2.Fill = ChangeBubbleColor();
+
+                if (isMoving)
+                {
+                    xPos += xSpeed * 2;
+                    yPos += ySpeed * 2;
+                    if (xPos <= 0 || xPos + bubble.Width >= screenWidth)
+                    {
+                        xSpeed *= -1;
+                        xPos = Math.Max(0, Math.Min(xPos, screenWidth - bubble.Width));
+                    }
+                    if (yPos <= 0 || yPos + bubble.Height >= screenHeight)
+                    {
+                        ySpeed *= -1;
+                        yPos = Math.Max(0, Math.Min(yPos, screenHeight - bubble.Height));
+                    }
+                }
+                if (isMoving2)
+                {
+                    xPos2 += xSpeed2 * 2;
+                    yPos2 += ySpeed2 * 2;
+                    if (xPos2 <= 0 || xPos2 + bubble2.Width >= screenWidth)
+                    {
+                        xSpeed *= -1;
+                        xPos2 = Math.Max(0, Math.Min(xPos2, screenWidth - bubble2.Width));
+                    }
+                    if (yPos2 <= 0 || yPos2 + bubble2.Height >= screenHeight)
+                    {
+                        ySpeed *= -1;
+                        yPos2 = Math.Max(0, Math.Min(yPos2, screenHeight - bubble2.Height));
+                    }
+                }
+
+                Canvas.SetLeft(bubble, xPos);
+                Canvas.SetTop(bubble, yPos);
+
+                Canvas.SetLeft(bubble2, xPos2);
+                Canvas.SetTop(bubble2, yPos2);
             }
         }
 
