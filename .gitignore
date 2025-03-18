@@ -2,3 +2,4 @@ BouncingBubble/logs/
 BouncingBubble/bin/
 BouncingBubble/obj/
 .vs/
+.csproj
