@@ -1,14 +1,10 @@
-﻿using System;
-using System.Windows;
-using System.Diagnostics;
+﻿using System.Windows;
 using System.Windows.Media;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Windows.Controls;
-using System.Windows.Media.Effects;
-using System.Windows.Media.Animation;
 
 namespace BouncingBubble
 {
@@ -28,10 +24,10 @@ namespace BouncingBubble
     {
         private Ellipse bubble2;
         private double xSpeed2 = -5, ySpeed2 = -5;
-        private double xPos2 = 1200, yPos2 = 700;
+        private double xPos2, yPos2;
         private Ellipse bubble;
         private double xSpeed = 7, ySpeed = 7;
-        private double xPos = 100, yPos = 100;
+        private double xPos, yPos;
         private Random random = new Random();
         private double screenWidth, screenHeight;
         private bool isMoving = true;
@@ -71,6 +67,13 @@ namespace BouncingBubble
 
             screenWidth = SystemParameters.PrimaryScreenWidth;
             screenHeight = SystemParameters.PrimaryScreenHeight;
+
+            xPos2 = Math.Max(0, screenWidth - 500);
+            yPos2 = Math.Max(0, screenHeight - 500);
+            xPos = 100;
+            yPos = 100;
+            if(Math.Abs(xPos - xPos2) < 80 && Math.Abs(yPos - yPos2) < 80)
+                xPos = 200;
 
             CreateBubble();
             //InitializeSpeed();
