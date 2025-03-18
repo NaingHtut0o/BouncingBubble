@@ -286,6 +286,11 @@ namespace BouncingBubble
                 ySpeed2 = tempYSpeed;
                 isMoving2 = tempIsMoving;
 
+                xPos += xSpeed *2;
+                yPos += ySpeed *2;
+                xPos2 += xSpeed2 *2;
+                yPos2 += ySpeed2 *2;
+
                 // Change colors on collision
                 bubble.Fill = ChangeBubbleColor();
                 bubble2.Fill = ChangeBubbleColor();
