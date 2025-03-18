@@ -27,14 +27,15 @@ namespace BouncingBubble
     public class BubbleWindow : Window
     {
         private Ellipse bubble2;
-        private double xSpeed2 = -4, ySpeed2 = -4;
-        private double xPos2 = 700, yPos2 = 700;
+        private double xSpeed2 = -5, ySpeed2 = -5;
+        private double xPos2 = 1200, yPos2 = 700;
         private Ellipse bubble;
-        private double xSpeed = 3.8, ySpeed = 3.8;
+        private double xSpeed = 7, ySpeed = 7;
         private double xPos = 100, yPos = 100;
         private Random random = new Random();
         private double screenWidth, screenHeight;
         private bool isMoving = true;
+        private bool isMoving2 = true;
         DispatcherTimer timer;
         private MouseHook mouseHook;
         private OpenedWindows openedWindows;
@@ -90,19 +91,25 @@ namespace BouncingBubble
         {
             Dispatcher.Invoke(() =>
             {
-                if (IsMouseOverBubble(mouseX, mouseY))
+                if (IsMouseOverBubble(mouseX, mouseY, bubble, xPos, yPos))
                 {
-                    ToggleMovement(); // Toggle movement if the bubble is clicked
+                    isMoving = !isMoving;
+                    //ToggleMovement(1); // Toggle movement if the bubble is clicked
+                }
+                if (IsMouseOverBubble(mouseX, mouseY, bubble2, xPos2, yPos2))
+                {
+                    isMoving2 = !isMoving2;
+                    //ToggleMovement(2); // Toggle movement if the bubble is clicked
                 }
             });
         }
 
-        private bool IsMouseOverBubble(int mouseX, int mouseY)
+        private bool IsMouseOverBubble(int mouseX, int mouseY, Ellipse ellipse, double xPos, double yPos)
         {
             // Get the bubble's position relative to the screen
             double bubbleX = this.Left + xPos;
             double bubbleY = this.Top + yPos;
-            double bubbleSize = bubble.Width; // Bubble is a circle, so Width = Height
+            double bubbleSize = ellipse.Width; // Bubble is a circle, so Width = Height
 
             // Check if the mouse is inside the bubble area
             double centerX = bubbleX + (bubbleSize / 2);
@@ -120,32 +127,21 @@ namespace BouncingBubble
             base.OnClosed(e);
         }
 
-        //protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
-        //{
-        //    base.OnMouseLeftButtonDown(e);
-        //    ToggleMovement();
-        //}
-
-        //private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        //{
-        //    if (e.Key == System.Windows.Input.Key.Space) // Press Spacebar to toggle
-        //    {
-        //        ToggleMovement();
-        //    }
-        //}
-
-        private void ToggleMovement()
+        private void ToggleMovement(int index)
         {
-            isMoving = !isMoving; // Flip the movement state
-
-            if (isMoving)
-            {
-                timer.Tick += UpdateBubble;
-            }
+            if(index == 1)
+                isMoving = !isMoving; // Flip the movement state
             else
-            {
-                timer.Tick -= UpdateBubble; // Pause movement
-            }
+                isMoving2 = !isMoving2;
+
+            //if (isMoving)
+            //{
+            //    timer.Tick += UpdateBubble;
+            //}
+            //else
+            //{
+            //    timer.Tick -= UpdateBubble; // Pause movement
+            //}
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -183,17 +179,11 @@ namespace BouncingBubble
                 Height = 80,
                 Fill = gradientBrush,
                 Opacity = 0.75,
-                //Effect = new DropShadowEffect
-                //{
-                //    Color = Colors.Cyan,
-                //    BlurRadius = 20,
-                //    Opacity = 0.8
-                //}
             };
             bubble2 = new Ellipse
             {
-                Width = 50,
-                Height = 50,
+                Width = 65,
+                Height = 65,
                 Fill = gradientBrush2,
                 Opacity = 0.75,
             };
@@ -202,29 +192,21 @@ namespace BouncingBubble
             this.Content = canvas;
         }
 
-        private void InitializeSpeed()
-        {
-            xSpeed = random.NextDouble() * 4 + 2;
-            ySpeed = random.NextDouble() * 4 + 2;
-            if (random.Next(2) == 0) xSpeed *= -1;
-            if (random.Next(2) == 0) ySpeed *= -1;
-        }
-
         private void UpdateBubble(object sender, EventArgs e)
         {
-            if (!isMoving) return;
             screenWidth = SystemParameters.PrimaryScreenWidth;
             screenHeight = SystemParameters.PrimaryScreenHeight;
 
-            MoveBubble(ref xPos, ref yPos, ref xSpeed, ref ySpeed, bubble);
-            MoveBubble(ref xPos2, ref yPos2, ref xSpeed2, ref ySpeed2, bubble2);
+            MoveBubble(ref xPos, ref yPos, ref xSpeed, ref ySpeed, bubble, isMoving);
+            MoveBubble(ref xPos2, ref yPos2, ref xSpeed2, ref ySpeed2, bubble2, isMoving2);
 
             CheckBubbleCollision();
         }
 
         // Moves a single bubble and checks for screen boundaries
-        private void MoveBubble(ref double x, ref double y, ref double xSpeed, ref double ySpeed, Ellipse bubble)
+        private void MoveBubble(ref double x, ref double y, ref double xSpeed, ref double ySpeed, Ellipse bubble, bool isMoving)
         {
+            if (!isMoving) return;
             double nextX = x + xSpeed;
             double nextY = y + ySpeed;
 
@@ -296,10 +278,13 @@ namespace BouncingBubble
                 // Swap speeds for a simple elastic collision effect
                 double tempXSpeed = xSpeed;
                 double tempYSpeed = ySpeed;
+                bool tempIsMoving = isMoving;
                 xSpeed = xSpeed2;
                 ySpeed = ySpeed2;
+                isMoving = isMoving2;
                 xSpeed2 = tempXSpeed;
                 ySpeed2 = tempYSpeed;
+                isMoving2 = tempIsMoving;
 
                 // Change colors on collision
                 bubble.Fill = ChangeBubbleColor();
@@ -312,15 +297,31 @@ namespace BouncingBubble
         private RadialGradientBrush ChangeBubbleColor()
         {
             Color randomColor = Color.FromRgb((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
-            Color randomColor2 = Color.FromRgb((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
+            
+            // Function to ensure values stay within 0-255
+            byte Clamp(int value) => (byte)Math.Max(0, Math.Min(255, value));
+
+            // Function to make a color lighter
+            byte LightenColorComponent(byte baseValue)
+            {
+                int increase = random.Next(30, 80); // Increase brightness (adjustable range)
+                return Clamp(baseValue + increase);
+            }
+
+            // Generate the second lighter color
+            Color randomColor2 = Color.FromRgb(
+                LightenColorComponent(randomColor.R),
+                LightenColorComponent(randomColor.G),
+                LightenColorComponent(randomColor.B)
+            );
 
             RadialGradientBrush gradientBrush = new RadialGradientBrush();
             gradientBrush.GradientOrigin = new Point(.3, .3);
             gradientBrush.Center = new Point(.5, .5);
             gradientBrush.RadiusX = .5;
             gradientBrush.RadiusY = .5;
-            gradientBrush.GradientStops.Add(new GradientStop(randomColor, 0.0));  // Center color
-            gradientBrush.GradientStops.Add(new GradientStop(randomColor2, 0.8));      // Outer color
+            gradientBrush.GradientStops.Add(new GradientStop(randomColor2, 0.0));  // Center color
+            gradientBrush.GradientStops.Add(new GradientStop(randomColor, 0.8));      // Outer color
             gradientBrush.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0)); // Fading edge
 
             return gradientBrush;
