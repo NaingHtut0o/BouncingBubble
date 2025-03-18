@@ -2,4 +2,6 @@ BouncingBubble/logs/
 BouncingBubble/bin/
 BouncingBubble/obj/
 .vs/
-.csproj
+BouncingBubble/Properties/PublishProfiles/FolderProfile.pubxml
+BouncingBubble/Properties/PublishProfiles/FolderProfile.pubxml.user
+BouncingBubble/BouncingBubble.csproj.user
