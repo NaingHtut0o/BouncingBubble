@@ -5,19 +5,30 @@ using System.Runtime.InteropServices;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Windows.Controls;
-using static System.Net.Mime.MediaTypeNames;
+//using static System.Net.Mime.MediaTypeNames;
+using System.Windows.Media.Imaging;
+using NLog;
 
 namespace BouncingBubble
 {
     public partial class MainWindow : Window
     {
         private BubbleWindow bubbleWindow;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         public MainWindow()
         {
-            InitializeComponent();
-            bubbleWindow = new BubbleWindow();
-            bubbleWindow.Show();
+            try
+            {
+                InitializeComponent();
+                bubbleWindow = new BubbleWindow();
+                bubbleWindow.Show();
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex);
+                throw;
+            }
         }
     }
 
@@ -37,6 +48,8 @@ namespace BouncingBubble
         private MouseHook mouseHook;
         private OpenedWindows openedWindows;
         private ParticleEffect particleEffect;
+        private MediaElement sparkEffect;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
@@ -140,15 +153,6 @@ namespace BouncingBubble
                 isMoving = !isMoving; // Flip the movement state
             else
                 isMoving2 = !isMoving2;
-
-            //if (isMoving)
-            //{
-            //    timer.Tick += UpdateBubble;
-            //}
-            //else
-            //{
-            //    timer.Tick -= UpdateBubble; // Pause movement
-            //}
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -160,6 +164,18 @@ namespace BouncingBubble
 
         private void CreateBubble()
         {
+            sparkEffect = new MediaElement
+            {
+                Source = new Uri("pack://application:,,,/Assets/firework.gif"),
+                LoadedBehavior = MediaState.Manual,   // Auto-play the animation
+                UnloadedBehavior = MediaState.Stop, // Stop when hidden
+                Visibility = Visibility.Hidden,
+                Width = 1000,
+                Height = 1000,
+                Stretch = Stretch.Uniform,
+                IsHitTestVisible = false,
+            };
+
             Canvas canvas = new Canvas();
 
             RadialGradientBrush gradientBrush = new RadialGradientBrush();
@@ -196,6 +212,7 @@ namespace BouncingBubble
             };
             canvas.Children.Add(bubble);
             canvas.Children.Add(bubble2);
+            canvas.Children.Add(sparkEffect);
             this.Content = canvas;
         }
 
@@ -264,6 +281,7 @@ namespace BouncingBubble
             if (bounced)
             {
                 particleEffect.CreateSpark(new Point(x, y));
+                //ShowSparkEffect(x, y);
                 bubble.Fill = ChangeBubbleColor();
             }
 
@@ -398,6 +416,35 @@ namespace BouncingBubble
             }
 
             return Rect.Empty; // No taskbar found (rare case)
+        }
+
+        void ShowSparkEffect(double x, double y)
+        {
+            try
+            {
+                sparkEffect.Visibility = Visibility.Visible;
+                sparkEffect.Position = TimeSpan.Zero; // Restart animation
+                sparkEffect.Play();
+
+                Canvas.SetLeft(sparkEffect, screenWidth / 2);
+                Canvas.SetTop(sparkEffect, screenHeight / 2);
+                var timer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(0.5) // Adjust based on your GIF duration
+                };
+                timer.Tick += (s, e) =>
+                {
+                    sparkEffect.Visibility = Visibility.Hidden;
+                    sparkEffect.Stop();
+                    timer.Stop();
+                };
+                timer.Start();
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex);
+                throw;
+            }
         }
     }
 }
